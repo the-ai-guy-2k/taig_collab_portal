@@ -55,6 +55,35 @@ def req(method, path, token=None, body=None):
         raise RuntimeError(f"{method} {path} -> HTTP {e.code}: {detail[:500]}")
 
 
+def login(admin_user, admin_pass):
+    """Log in, accepting Planka's first-run terms if the instance asks.
+
+    Planka 2.3 requires the default terms to be accepted on first login:
+    POST /api/access-tokens returns 403 with a pendingToken, then
+    POST /api/access-tokens/accept-terms with that token plus the SHA256
+    signature from GET /api/terms completes the login.
+    """
+    try:
+        resp = req("POST", "/api/access-tokens",
+                   body={"emailOrUsername": admin_user, "password": admin_pass})
+        item = resp["item"]
+        return item["accessToken"] if isinstance(item, dict) else item
+    except RuntimeError as e:
+        if "accept-terms" not in str(e):
+            raise
+        import re
+        m = re.search(r'"pendingToken":"([^"]+)"', str(e))
+        if not m:
+            raise RuntimeError(f"accept-terms step but no pendingToken in: {e}")
+        pending = m.group(1)
+        terms = req("GET", "/api/terms")
+        done = req("POST", "/api/access-tokens/accept-terms",
+                   body={"pendingToken": pending, "signature": terms["signature"]})
+        item = done["item"]
+        print("Accepted Planka default terms on first admin login.")
+        return item["accessToken"] if isinstance(item, dict) else item
+
+
 def main():
     env = load_env(ENV_FILE)
     admin_user = env.get("DEFAULT_ADMIN_USERNAME", "tee")
@@ -63,9 +92,7 @@ def main():
         print("ERROR: set a real DEFAULT_ADMIN_PASSWORD in .env first.", file=sys.stderr)
         return 1
 
-    login = req("POST", "/api/access-tokens",
-                body={"emailOrUsername": admin_user, "password": admin_pass})
-    token = login["item"]["accessToken"]
+    token = login(admin_user, admin_pass)
     print("Logged in as admin.")
 
     users = req("GET", "/api/users", token)["items"]
