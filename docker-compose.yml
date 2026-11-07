@@ -1,0 +1,41 @@
+# Collab Portal — canonical compose file (reference / local dev).
+# The Droplet runs plain `docker run` via deploy.sh (no compose plugin there).
+# Image is pinned to Planka 2.3.1, not latest.
+services:
+  planka:
+    image: ghcr.io/plankanban/planka:2.3.1
+    restart: on-failure
+    volumes:
+      - data:/app/data
+    ports:
+      - 127.0.0.1:3003:1337
+    environment:
+      - BASE_URL=${BASE_URL:-http://138.68.226.24/collab-portal}
+      - DATABASE_URL=postgresql://postgres@postgres/planka
+      - SECRET_KEY=${SECRET_KEY}
+      - TRUST_PROXY=true
+      - DEFAULT_ADMIN_EMAIL=${DEFAULT_ADMIN_EMAIL}
+      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD}
+      - DEFAULT_ADMIN_NAME=${DEFAULT_ADMIN_NAME:-Sanil Tison}
+      - DEFAULT_ADMIN_USERNAME=${DEFAULT_ADMIN_USERNAME:-tee}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    restart: on-failure
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=planka
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d planka"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  data:
+  db-data:
