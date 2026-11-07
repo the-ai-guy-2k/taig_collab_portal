@@ -77,8 +77,9 @@ def login(admin_user, admin_pass):
             raise RuntimeError(f"accept-terms step but no pendingToken in: {e}")
         pending = m.group(1)
         terms = req("GET", "/api/terms")
+        signature = terms["item"]["signature"]
         done = req("POST", "/api/access-tokens/accept-terms",
-                   body={"pendingToken": pending, "signature": terms["signature"]})
+                   body={"pendingToken": pending, "signature": signature})
         item = done["item"]
         print("Accepted Planka default terms on first admin login.")
         return item["accessToken"] if isinstance(item, dict) else item
