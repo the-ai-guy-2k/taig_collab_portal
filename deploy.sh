@@ -13,7 +13,7 @@ set -a; . ./.env; set +a
 
 : "${SECRET_KEY:?SECRET_KEY must be set in .env}"
 : "${DEFAULT_ADMIN_PASSWORD:?DEFAULT_ADMIN_PASSWORD must be set in .env}"
-BASE_URL="${BASE_URL:-http://138.68.226.24/collab-portal}"
+BASE_URL="${BASE_URL:-https://taigtsp.duckdns.org/collab-portal}"
 
 docker network create collab-portal-net >/dev/null 2>&1 || true
 docker volume create collab-portal-data >/dev/null
